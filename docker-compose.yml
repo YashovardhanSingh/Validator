@@ -13,26 +13,28 @@ services:
       - C_FORCE_ROOT=true
     volumes:
       - postgresql-data:/var/lib/postgresql/data
+      - ./scripts/docker_entrypoints/initdb.d:/docker-entrypoint-initdb.d
 
-  app:
+  pv:
     build:
       dockerfile: Dockerfile
       context: .
     environment:
       - DJANGO_APPLICATION_ENVIRONMENT=local
       - DJANGO_SETTINGS_MODULE=config.settings.local
-      - NETWORK_SIGNING_KEY=6f812a35643b55a77f71c3b722504fbc5918e83ec72965f7fd33865ed0be8f81
+      - NETWORK_SIGNING_KEY=731f928711f30257d20bde471200c11975009415b4c6f596e7ee81bfed1a033b
+      - REDIS_DB=0
       - REDIS_HOST=redis
       - POSTGRES_HOST=db
       - POSTGRES_DB=thenewboston
       - POSTGRES_USER=thenewboston
       - POSTGRES_PASSWORD=thenewboston
       - SECRET_KEY=somesecret
-    command: python3 -u /opt/project/manage.py runserver 0.0.0.0:8000
+    entrypoint: /opt/project/scripts/docker_entrypoints/entrypoint_pv.sh
     volumes:
       - .:/opt/project
     ports:
-      - '8000:8000'
+      - '8001:8000'
     links:
       - db
       - redis
@@ -40,13 +42,43 @@ services:
       - db
       - redis
 
-  celery:
+  cv:
     build:
       dockerfile: Dockerfile
       context: .
     environment:
       - DJANGO_APPLICATION_ENVIRONMENT=local
-      - NETWORK_SIGNING_KEY=6f812a35643b55a77f71c3b722504fbc5918e83ec72965f7fd33865ed0be8f81
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - NETWORK_SIGNING_KEY=46a23fd52b2690f5acf56654489fd67b3734a52f35a2b7827f5caeaa06c0c0a5
+      - REDIS_DB=1
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=thenewboston_cv
+      - POSTGRES_USER=thenewboston
+      - POSTGRES_PASSWORD=thenewboston
+      - SECRET_KEY=somesecret
+    entrypoint: /opt/project/scripts/docker_entrypoints/entrypoint_cv.sh
+    volumes:
+      - .:/opt/project
+    ports:
+      - '8002:8000'
+    links:
+      - pv
+      - db
+      - redis
+    depends_on:
+      - pv
+      - db
+      - redis
+
+  celery_pv:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    environment:
+      - DJANGO_APPLICATION_ENVIRONMENT=local
+      - NETWORK_SIGNING_KEY=731f928711f30257d20bde471200c11975009415b4c6f596e7ee81bfed1a033b
+      - REDIS_DB=0
       - REDIS_HOST=redis
       - POSTGRES_HOST=db
       - POSTGRES_DB=thenewboston
@@ -57,9 +89,37 @@ services:
     volumes:
       - .:/opt/project
     links:
+      - pv
       - db
       - redis
     depends_on:
+      - pv
+      - db
+      - redis
+
+  celery_cv:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    environment:
+      - DJANGO_APPLICATION_ENVIRONMENT=local
+      - NETWORK_SIGNING_KEY=46a23fd52b2690f5acf56654489fd67b3734a52f35a2b7827f5caeaa06c0c0a5
+      - REDIS_DB=1
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=thenewboston_cv
+      - POSTGRES_USER=thenewboston
+      - POSTGRES_PASSWORD=thenewboston
+      - SECRET_KEY=somesecret
+    command: celery -A config.settings worker -l debug
+    volumes:
+      - .:/opt/project
+    links:
+      - cv
+      - db
+      - redis
+    depends_on:
+      - cv
       - db
       - redis
 

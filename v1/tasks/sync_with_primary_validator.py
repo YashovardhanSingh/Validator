@@ -110,8 +110,8 @@ def set_primary_validator(*, validator):
     self_configuration.primary_validator = validator
     self_configuration.save()
 
-    connect_to_primary_validator(primary_validator=validator)
-    sync_blockchains(primary_validator=validator)
+    # connect_to_primary_validator(primary_validator=validator)
+    # sync_blockchains(primary_validator=validator)
 
 
 def sync_blockchains(*, primary_validator):

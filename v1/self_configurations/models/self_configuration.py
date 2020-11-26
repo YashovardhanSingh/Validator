@@ -15,7 +15,7 @@ class SelfConfiguration(NetworkValidator):
     primary_validator = models.ForeignKey(Validator, on_delete=models.SET_NULL, blank=True, null=True)
     node_type = models.CharField(choices=NODE_TYPE_CHOICES, max_length=22)
 
-    class Meta:
+    class Meta(NetworkValidator.Meta):
         default_related_name = 'self_configurations'
 
     def __str__(self):
@@ -29,7 +29,8 @@ class SelfConfiguration(NetworkValidator):
         Update related row in the validator table
         """
 
-        validator = Validator.objects.filter(ip_address=self.ip_address)
+        validator = Validator.objects.filter(ip_address=self.ip_address, protocol=self.protocol, port=self.port)
+        print(validator, self.protocol, self.port)
         field_names = common_field_names(self, Validator)
         data = {f: getattr(self, f) for f in field_names}
 
